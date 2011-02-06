@@ -8,13 +8,6 @@
  *  
  * needed libraries:
  * -FlexiTimer (http://github.com/wimleers/flexitimer2)
- *  
- * libraries to patch:
- * Wire: 
- *  	utility/twi.h: #define TWI_FREQ 400000L (was 100000L)
- *                     #define TWI_BUFFER_LENGTH 98 (was 32)
- *  	wire.h: #define BUFFER_LENGTH 98 (was 32)
- *
  *
  * This file is part of neorainbowduino.
  *
@@ -52,7 +45,7 @@ A variable should be declared volatile whenever its value can be changed by some
 #define STATE_DATA      3
 #define STATE_CHECKSUM  4
 
-int serial_state = STATE_WAITITNG;
+int serial_state = STATE_WAITING;
 byte address, data_len, checksum, data_read;
 
 extern unsigned char buffer[2][96];  //two buffers (backbuffer and frontbuffer)
@@ -99,12 +92,12 @@ void setup() {
 //the mainloop - try to fetch data from the i2c bus and copy it into our buffer
 void loop() {
   if (Serial.available() > 0) {
-    switch serial_state {
+    switch (serial_state) {
       case STATE_WAITING:
         if (Serial.read() == 0x46) serial_state = STATE_ADDRESS;
         break;
       case STATE_ADDRESS:
-        address = Serial.read();
+        address = Serial.read(); // TODO Check the message is for us
         serial_state = STATE_LENGTH;
         break;
       case STATE_LENGTH:
