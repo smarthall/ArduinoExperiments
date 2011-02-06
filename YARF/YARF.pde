@@ -45,6 +45,15 @@ A variable should be declared volatile whenever its value can be changed by some
  only place that this is likely to occur is in sections of code associated with interrupts, called an 
  interrupt service routine.
  */
+ 
+#define STATE_WAITING   0
+#define STATE_ADDRESS   1
+#define STATE_LENGTH    2
+#define STATE_DATA      3
+#define STATE_CHECKSUM  4
+
+int serial_state = STATE_WAITITNG;
+byte address, data_len, checksum, data_read;
 
 extern unsigned char buffer[2][96];  //two buffers (backbuffer and frontbuffer)
 
@@ -58,10 +67,6 @@ byte g_bufCurr;
 //flag to blit image
 volatile byte g_swapNow;
 byte g_circle;
-
-//data marker
-#define START_OF_DATA 0x10
-#define END_OF_DATA 0x20
 
 //FPS
 #define FPS 80.0f
@@ -83,56 +88,42 @@ void setup() {
   g_swapNow = 0; 
   g_circle = 0;
 
-  Wire.begin(I2C_DEVICE_ADDRESS); // join i2c bus as slave
-  Wire.onReceive(receiveEvent);   // define the receive function for receiving data from master
-  // Keep in mind:
-  // While an interrupt routine is running, all other interrupts are blocked. As a result, timers will not work 
-  // in interrupt routines and other functionality may not work as expected
-  // -> if i2c data is receieved our led update timer WILL NOT WORK for a short time, the result
-  // are display errors!
-
   //redraw screen 80 times/s
   FlexiTimer2::set(1, 1.0f/(128.f*FPS), displayNextLine);
   FlexiTimer2::start();                            //start interrupt code
+  
+  // Setup Serial Communications
+  Serial.begin(9600);
 }
 
 //the mainloop - try to fetch data from the i2c bus and copy it into our buffer
 void loop() {
-  if (Wire.available()>97) { 
-    
-    byte b = Wire.receive();
-    if (b != START_OF_DATA) {
-      //handle error, read remaining data until end of data marker (if available)
-      while (Wire.available()>0 && Wire.receive()!=END_OF_DATA) {}      
-      return;
+  if (Serial.available() > 0) {
+    switch serial_state {
+      case STATE_WAITING:
+        if (Serial.read() == 0x46) serial_state = STATE_ADDRESS;
+        break;
+      case STATE_ADDRESS:
+        address = Serial.read();
+        serial_state = STATE_LENGTH;
+        break;
+      case STATE_LENGTH:
+        data_len = Serial.read();
+        data_read = 0;
+        serial_state = STATE_DATA;
+        break;
+      case STATE_DATA:
+        buffer[!g_bufCurr][data_read++] = Serial.read();
+        if (data_len > data_read) serial_state = STATE_CHECKSUM;
+        break;
+      case STATE_CHECKSUM:
+        checksum = Serial.read(); // TODO Check Checksum
+        g_swapNow = 1; // TODO Swap if checksum is good
+        serial_state = STATE_WAITING;
+        break;
     }
-
-    byte backbuffer = !g_bufCurr;
-    b=0;
-    //read image data (payload) - an image size is exactly 96 bytes
-    while (b<96) { 
-      buffer[backbuffer][b++] = Wire.receive();  //recieve whatever is available
-    }
-
-    //read end of data marker
-    if (Wire.receive()==END_OF_DATA) {
-        //set the 'we need to blit' flag
-  	g_swapNow = 1;
-    } 
   }
 }
-
-
-
-//=============HANDLERS======================================
-
-//get data from master - HINT: this is a ISR call!
-//HINT2: do not handle stuff here!! this will NOT work
-//collect only data here and process it in the main loop!
-void receiveEvent(int numBytes) {
-  //do nothing here
-}
-
 
 //============INTERRUPTS======================================
 
