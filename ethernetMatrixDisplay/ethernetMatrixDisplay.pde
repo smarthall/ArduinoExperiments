@@ -20,11 +20,8 @@ SoftwareSerial lcd = SoftwareSerial(PIN_RX, PIN_TX);
 EtherShield es = EtherShield();
 
 void setup() {
-  // Setup LCD
-  initLCD();
-  
   // Setup Serial
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   // Setup i2c bus
   Wire.begin(1);
@@ -52,12 +49,11 @@ void loop() {
       
       if (buf[IP_PROTO_P] == IP_PROTO_UDP_V && buf[UDP_DST_PORT_H_P] == 4 && buf[UDP_DST_PORT_L_P] == 1
        && buf[UDP_LEN_L_P] == 104 && buf[UDP_LEN_H_P] == 0) {
-        lcd.print("P");
-        Wire.beginTransmission(0x02);
-        Wire.send(START_OF_DATA);
-        Wire.send(buf + UDP_DATA_P, 96);
-        Wire.send(END_OF_DATA);
-        Wire.endTransmission();
+        Serial.write((byte)0x46); // Start Code
+        Serial.write((byte)0x01); // Address
+        Serial.write((byte)0x60); // Data Length
+        Serial.write(buf + UDP_DATA_P, 96); // Data
+        Serial.write((byte)0x00); // Checksum - Fake it till you make it :D
       }
     }
   }
@@ -74,22 +70,3 @@ void setupEthernet() {
   es.ES_init_ip_arp_udp_tcp (mymac, myip, 80);
 }
 
-/* ================================================ */
-/* LCD Functions */
-
-void clearLCD() {
-  lcd.print(0xFE, BYTE);
-  lcd.print(0x01, BYTE);
-}
-
-void initLCD() {
-  // Start displaying to the user right on boot
-  pinMode(PIN_TX, OUTPUT);
-  digitalWrite(PIN_TX, HIGH);
-  pinMode(PIN_RX, INPUT);
-  lcd.begin(9600);
-  
-  clearLCD();
-  lcd.print(0x7C, BYTE);
-  lcd.print(0x9D, BYTE);
-}
