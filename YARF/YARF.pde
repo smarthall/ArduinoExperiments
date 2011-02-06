@@ -86,7 +86,7 @@ void setup() {
   FlexiTimer2::start();                            //start interrupt code
   
   // Setup Serial Communications
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 //the mainloop - try to fetch data from the i2c bus and copy it into our buffer
@@ -107,7 +107,7 @@ void loop() {
         break;
       case STATE_DATA:
         buffer[!g_bufCurr][data_read++] = Serial.read();
-        if (data_len > data_read) serial_state = STATE_CHECKSUM;
+        if (data_len < data_read) serial_state = STATE_CHECKSUM;
         break;
       case STATE_CHECKSUM:
         checksum = Serial.read(); // TODO Check Checksum
