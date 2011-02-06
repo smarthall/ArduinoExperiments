@@ -57,7 +57,7 @@ void setup(){
   es.ES_enc28j60PhyWrite (PHLCON, 0x990);
   
   // Put a message on the screen
-  lcd.print("Ping Me!        ");
+  lcd.print("    Ping Me!    ");
   lcd.print((int)myip[0]);
   lcd.print(".");
   lcd.print((int)myip[1]);
