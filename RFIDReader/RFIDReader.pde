@@ -30,10 +30,9 @@ NewSoftSerial RFID(RXRFID,TXRFID);
 
 // Serial State
 #define STATE_WAITING  0
-#define STATE_START    1
-#define STATE_SERIAL   2
-#define STATE_CHECKSUM 3
-#define STATE_END      4
+#define STATE_SERIAL   1
+#define STATE_CHECKSUM 2
+#define STATE_END      3
 
 #define START_CODE 0x02
 #define END_CODE   0x03
