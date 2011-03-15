@@ -61,7 +61,7 @@ void loop() {
         if (readbyte == START_CODE) {
           state = STATE_SERIAL;
           curByte = 0;
-          calcChecksum = 0xFF;
+          calcChecksum = 0x00;
           #ifdef DEBUG
             Serial.println("***Got Start Code***");
           #endif
@@ -71,7 +71,13 @@ void loop() {
       // If we were waiting for the serial
       case STATE_SERIAL:
         serial[curByte] = readbyte;
-        calcChecksum += readbyte;
+        if (curByte % 2) {
+          char *startChar, *endChar;
+          startChar = serial + curByte;
+          endChar = serial + curByte - 1;
+          
+          calcChecksum ^= strtol(startChar, &endChar, 16);
+        }
         
         if (curByte++ == SERIAL_LEN) {
           state = STATE_CHECKSUM;
@@ -83,7 +89,7 @@ void loop() {
       
       // If we're waiting for a checksum
       case STATE_CHECKSUM:
-        /*if (calcChecksum == readbyte) {
+        if (calcChecksum == readbyte) {
           state = STATE_END;
           #ifdef DEBUG
             Serial.println("***Checksum Pass***");
@@ -97,12 +103,12 @@ void loop() {
             Serial.print(calcChecksum, HEX);
             Serial.println(" ***");
           #endif
-        }*/
+        }
         // TODO: Check the actual checksum
-        state = STATE_END;
+        /*state = STATE_END;
         #ifdef DEBUG
           Serial.println("***Checksum Stubbed Pass***");
-        #endif
+        #endif*/
         break;
         
       // If we're waiting the end code
