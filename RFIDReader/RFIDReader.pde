@@ -1,3 +1,15 @@
+/*********************************************************
+ * This sketch is designed to read RFID tags from the
+ * SeedStudio 125kHz UART RFID Reader. You can buy them
+ * from SeedStudio or LittleBirdElectronics here:
+ * http://www.seeedstudio.com/depot/125khz-rfid-module-p-171.html
+ * http://littlebirdelectronics.com/products/125khz-rfid-module-uart
+ *
+ * Author: Daniel Hall <daniel@danielhall.me>
+ * Date: 16/03/2011
+ * License: GPLv3
+ *********************************************************/
+
 #include <NewSoftSerial.h>
 
 // Debugging?
