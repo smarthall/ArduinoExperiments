@@ -15,10 +15,11 @@
 // Debugging?
 //#define DEBUG
 
-// PIN constants
+// RFID pin, only RX pin is used
 #define RXRFID 4
 #define TXRFID 5
 
+// Only define if you have a buzzer
 #define BUZZERPIN 9
 
 // Software Serial
@@ -51,8 +52,10 @@ void setup() {
   Serial.begin(9600);
   RFID.begin(9600);
   
-  tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
-  delay(BUZZER_LEN);
+  #ifdef BUZZERPIN
+    tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
+    delay(BUZZER_LEN);
+  #endif
   
   #ifdef DEBUG
     Serial.println("Booted...");
@@ -137,7 +140,9 @@ void loop() {
             #endif
           } else {
             state = STATE_WAITING;
-            tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
+            #ifdef BUZZERPIN
+              tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
+            #endif
             #ifdef DEBUG
               Serial.print("***Checksum fail - Got:");
               Serial.print(readChecksum, HEX);
@@ -155,10 +160,14 @@ void loop() {
           #ifdef DEBUG
             Serial.println("***Got End Code***");
           #endif
-          tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
+          #ifdef BUZZERPIN
+            tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
+          #endif
           gotSerial(serial);
         } else {
-          tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
+          #ifdef BUZZERPIN
+            tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
+          #endif
         }
         
         state = STATE_WAITING;
