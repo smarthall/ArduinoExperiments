@@ -178,10 +178,6 @@ void loop() {
 
 // Replace this function with your own payload for when a tag is read.
 void gotSerial(char *theSerial) {
-  #ifdef DEBUG
-    Serial.println("Beeping.. :D");
-  #endif
-  
   Serial.print("RFID Serial: ");
   for (int i = 0; i < SERIAL_LEN; i++) {
     Serial.print(serial[i], BYTE);
