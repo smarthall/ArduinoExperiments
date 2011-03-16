@@ -25,7 +25,8 @@
 NewSoftSerial RFID(RXRFID,TXRFID);
 
 // Buzzer settings
-#define BUZZER_TONE 3520
+#define BUZZER_TONE_YES 3520
+#define BUZZER_TONE_NO  700
 #define BUZZER_LEN  100
 
 // Serial State
@@ -34,11 +35,13 @@ NewSoftSerial RFID(RXRFID,TXRFID);
 #define STATE_CHECKSUM 2
 #define STATE_END      3
 
-#define START_CODE 0x02
-#define END_CODE   0x03
-#define SERIAL_LEN 10
+#define START_CODE     0x02
+#define END_CODE       0x03
+#define SERIAL_LEN     10
+#define CHECKSUM_SIZE  2
 
-char serial[SERIAL_LEN];
+char serial[SERIAL_LEN + 1];
+char checksum[CHECKSUM_SIZE + 1];
 byte state = STATE_WAITING;
 byte curByte, calcChecksum;
 
@@ -47,6 +50,17 @@ void setup() {
   // initialize serial communications at 9600 bps:
   Serial.begin(9600);
   RFID.begin(9600);
+  
+  tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
+  delay(BUZZER_LEN);
+  
+  #ifdef DEBUG
+    Serial.println("Booted...");
+    Serial.println(0x62 ^ 0xE3 ^ 0x08 ^ 0x6C ^ 0xED, HEX);
+    Serial.println(0x01 ^ 0x00 ^ 0x03 ^ 0x8C ^ 0xEE, HEX);
+    Serial.println(0x00 ^ 0xD8, HEX);
+    Serial.println((byte) (0x01 + 0x00 + 0x03 + 0x8C + 0xEE), HEX);
+  #endif
 }
 
 void loop() {
@@ -59,9 +73,13 @@ void loop() {
     
     // Debug info
     #ifdef DEBUG
-      Serial.print("Data: ");
+      Serial.print("DATA:\tCHAR=");
+      Serial.print(readbyte, BYTE);
+      Serial.print("\tHEX=");
       Serial.print(readbyte, HEX);
-      Serial.print(", State: ");
+      Serial.print("\tBIN=");
+      Serial.print(readbyte, BIN);
+      Serial.print("\tDEC=");
       Serial.println(state, DEC);
     #endif
     
@@ -72,6 +90,7 @@ void loop() {
         if (readbyte == START_CODE) {
           state = STATE_SERIAL;
           curByte = 0;
+          memset(serial, '\0', sizeof(char) * (SERIAL_LEN + 1));
           calcChecksum = 0x00;
           #ifdef DEBUG
             Serial.println("***Got Start Code***");
@@ -83,14 +102,25 @@ void loop() {
       case STATE_SERIAL:
         serial[curByte] = readbyte;
         if (curByte % 2) {
-          char *startChar, *endChar;
-          startChar = serial + curByte;
-          endChar = serial + curByte - 1;
+          char *startChar;
+          startChar = serial + (curByte - 1);
           
-          calcChecksum ^= strtol(startChar, &endChar, 16);
+          calcChecksum ^= strtol(startChar, NULL, 16);
+          #ifdef DEBUG
+            Serial.print("CHECK:\tCHAR=");
+            Serial.print(startChar[0], BYTE);
+            Serial.print(startChar[1], BYTE);
+            Serial.print("\tDEC=");
+            Serial.print(strtol(startChar, NULL, 16));
+            Serial.print("\tBIN=");
+            Serial.println(strtol(startChar, NULL, 16), BIN);
+            Serial.println("");
+          #endif
         }
         
-        if (curByte++ == SERIAL_LEN) {
+        if (++curByte == SERIAL_LEN) {
+          curByte = 0;
+          memset(checksum, '\0', sizeof(char) * (CHECKSUM_SIZE + 1));
           state = STATE_CHECKSUM;
           #ifdef DEBUG
             Serial.println("***Got Serial Code***");
@@ -100,20 +130,26 @@ void loop() {
       
       // If we're waiting for a checksum
       case STATE_CHECKSUM:
-        if (calcChecksum == readbyte) {
-          state = STATE_END;
-          #ifdef DEBUG
-            Serial.println("***Checksum Pass***");
-          #endif
-        } else {
-          state = STATE_WAITING;
-          #ifdef DEBUG
-            Serial.print("***Checksum fail - Got:");
-            Serial.print(readbyte, HEX);
-            Serial.print(", Wanted: ");
-            Serial.print(calcChecksum, HEX);
-            Serial.println(" ***");
-          #endif
+        checksum[curByte] = readbyte;
+        
+        if (++curByte == CHECKSUM_SIZE) {
+          byte readChecksum = strtol(checksum, NULL, 16);
+          if (calcChecksum == readChecksum) {
+            state = STATE_END;
+            #ifdef DEBUG
+              Serial.println("***Checksum Pass***");
+            #endif
+          } else {
+            state = STATE_WAITING;
+            tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
+            #ifdef DEBUG
+              Serial.print("***Checksum fail - Got:");
+              Serial.print(readChecksum, HEX);
+              Serial.print(", Wanted: ");
+              Serial.print(calcChecksum, HEX);
+              Serial.println(" ***");
+            #endif
+          }
         }
         // TODO: Check the actual checksum
         /*state = STATE_END;
@@ -128,7 +164,10 @@ void loop() {
           #ifdef DEBUG
             Serial.println("***Got End Code***");
           #endif
+          tone(BUZZERPIN, BUZZER_TONE_YES, BUZZER_LEN);
           gotSerial(serial);
+        } else {
+          tone(BUZZERPIN, BUZZER_TONE_NO, BUZZER_LEN);
         }
         
         state = STATE_WAITING;
@@ -142,7 +181,6 @@ void gotSerial(char *theSerial) {
   #ifdef DEBUG
     Serial.println("Beeping.. :D");
   #endif
-  tone(BUZZERPIN, BUZZER_TONE, BUZZER_LEN);
   
   Serial.print("RFID Serial: ");
   for (int i = 0; i < SERIAL_LEN; i++) {
