@@ -151,11 +151,6 @@ void loop() {
             #endif
           }
         }
-        // TODO: Check the actual checksum
-        /*state = STATE_END;
-        #ifdef DEBUG
-          Serial.println("***Checksum Stubbed Pass***");
-        #endif*/
         break;
         
       // If we're waiting the end code
