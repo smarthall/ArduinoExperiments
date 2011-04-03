@@ -28,7 +28,7 @@ NewSoftSerial RFID(RXRFID,TXRFID);
 // Buzzer settings
 #define BUZZER_TONE_YES 3520
 #define BUZZER_TONE_NO  700
-#define BUZZER_LEN  100
+#define BUZZER_LEN  20
 
 // Serial State
 #define STATE_WAITING  0
